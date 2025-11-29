@@ -1,0 +1,8 @@
+Flask
+requests
+numpy
+gunicorn
+google-generativeai
+python-dotenv
+torch
+sentence-transformers
