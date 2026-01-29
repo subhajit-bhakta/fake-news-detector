@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Fake News Detector</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+  <header>
+    <h1>🧠 AI Fake News Detector</h1>
+    <p>Understand context, verify truth, and detect misinformation.</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <form id="newsForm">
+        <textarea id="newsText" placeholder="Type or paste a news statement..."></textarea>
+        <button type="submit">🔍 Analyze News</button>
+      </form>
+
+      <div id="result" class="result"></div>
+    </section>
+
+    <aside>
+      <h3>🕓 Analysis History</h3>
+      <div id="history"></div>
+    </aside>
+  </main>
+
+  <script>
+    const form = document.getElementById("newsForm");
+    const newsText = document.getElementById("newsText");
+    const resultDiv = document.getElementById("result");
+    const historyDiv = document.getElementById("history");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const text = newsText.value.trim();
+      if (!text) return alert("Please enter a news statement!");
+
+      resultDiv.innerHTML = "⏳ Analyzing...";
+      resultDiv.classList.add("show");
+
+      const res = await fetch("/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      const data = await res.json();
+
+      if (data.prediction === "INVALID INPUT") {
+        resultDiv.innerHTML = `
+          <div class="analysis invalid" style="border: 2px solid #f97316; padding: 20px;">
+            <h2 style="color:#f97316;">❌ Invalid Input</h2>
+            <p>Please enter a meaningful news-like statement.</p>
+            <p><em>${data.api_match}</em></p>
+          </div>
+        `;
+
+        const entry = document.createElement("div");
+        entry.classList.add("history-item");
+        entry.innerHTML = `<strong>Invalid Input</strong> - ${text}`;
+        historyDiv.prepend(entry);
+
+        return;
+      }
+
+        // Determine status
+	let statusLabel = "";
+	let statusIcon = "";
+	let confidenceColor = "";
+
+	if (data.prediction === "Real") {
+	  statusLabel = "Real News";
+	  statusIcon = "✅";
+	  confidenceColor = "#22c55e";  // green
+	}
+	else if (data.prediction === "Fake") {
+	  statusLabel = "Fake News";
+	  statusIcon = "⚠️";
+	  confidenceColor = "#ef4444";  // red
+	}
+	else {
+	  statusLabel = "Uncertain";
+	  statusIcon = "❔";
+	  confidenceColor = "#facc15";  // yellow
+	}
+
+	resultDiv.innerHTML = `
+	  <div class="analysis ${data.prediction.toLowerCase()}">
+	    <h2>${statusIcon} ${statusLabel}</h2>
+	
+	    <div class="confidence">
+	      <div class="confidence-fill" 
+	           style="background:${confidenceColor};width:${data.confidence}%"></div>
+	    </div>
+
+	    <div class="confidence-text">Confidence: ${data.confidence.toFixed(2)}%</div>
+
+	    ${
+	      data.api_match
+	        ? `<div class="news-match"><strong>Matched Source:</strong> ${data.api_match}</div>`
+	        : `<div class="news-match"><em>No verified match found.</em></div>`
+	    }
+	  </div>
+	`;
+
+      // Add to history
+      const entry = document.createElement("div");
+      entry.classList.add("history-item");
+      entry.innerHTML = `<strong>${data.prediction}</strong> (${data.confidence.toFixed(
+        1
+      )}%) - ${text}`;
+      historyDiv.prepend(entry);
+    });
+
+    // Re-enable selection inside textarea
+    newsText.addEventListener("selectstart", e => e.stopPropagation());
+    newsText.addEventListener("mousedown", e => e.stopPropagation());
+    newsText.addEventListener("mouseup", e => e.stopPropagation());
+
+    // Allow paste inside textarea
+    newsText.addEventListener("paste", e => {
+      e.stopPropagation();   // stop global block
+    });
+
+    // Allow Ctrl+V inside textarea
+    newsText.addEventListener("keydown", function (e) {
+      if (e.ctrlKey && e.key.toLowerCase() === "v") {
+        e.stopPropagation();
+      }
+    });
+
+  // Disable right-click
+  document.addEventListener("contextmenu", function(e) {
+    if (e.target !== newsText) e.preventDefault();
+  });
+
+  // Disable common copy shortcuts
+  document.addEventListener("keydown", function(e) {
+    if (e.target !== newsText) return;
+
+    if (
+      e.ctrlKey &&
+      ["c", "u", "s", "x", "a", "v"].includes(e.key.toLowerCase())
+    ) {
+      e.preventDefault();
+    }
+
+    // Disable Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C
+    if (e.ctrlKey && e.shiftKey && ["i", "j", "c"].includes(e.key.toLowerCase())) {
+      e.preventDefault();
+    }
+
+    // Disable F12
+    if (e.key === "F12") {
+      e.preventDefault();
+    }
+  });
+
+  // Disable drag selection
+  document.addEventListener("dragstart", function(e) {
+    if (e.target !== newsText) e.preventDefault();
+  });
+
+  // Disable text selection via mouse
+  document.addEventListener("selectstart", function(e) {
+    if (e.target !== newsText) e.preventDefault();
+  });
+  </script>
+</body>
+</html>
