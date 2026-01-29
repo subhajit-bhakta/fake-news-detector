@@ -29,7 +29,7 @@ WIKI_SIM_THRESHOLD = 0.70
 NEWS_SIM_THRESHOLD = 0.65
 
 # INITIALIZATION
-app = Flask(__name__)
+app = Flask(__name__, static_folder="static", template_folder="templates")
 app.secret_key = FLASK_SECRET
 embedder = SentenceTransformer(EMBEDDING_MODEL_NAME)
 genai.configure(api_key=GEMINI_API_KEY)
@@ -48,11 +48,11 @@ def is_valid_news(text):
 
     text = text.strip().lower()
 
-    # 1️⃣ Minimum length (prevents "hi", "ok", "help", etc.)
+    # 1. Minimum length
     if len(text) < 25:
         return False, "Too short. Please provide a complete news-like statement."
 
-    # 2️⃣ Reject casual / greeting messages
+    # 2. Reject casual / greeting messages
     casual_words = [
         "hi", "hello", "hey", "ok", "bro", "dude", "good morning",
         "good night", "help me", "how are you", "what's up"
@@ -60,11 +60,11 @@ def is_valid_news(text):
     if text in casual_words:
         return False, "Appears to be casual conversation."
 
-    # 3️⃣ Reject emojis
+    # 3. Reject emojis
     if re.search(r"[😀-🙏🌀🔥❤️-🧿]", text):
         return False, "Contains emojis — not valid news."
 
-    # 4️⃣ Must contain ANY meaningful verb (news-like)
+    # 4. Must contain ANY meaningful verb (news-like)
     verbs = [
         "is", "was", "were", "has", "have", "had",
         "announced", "reported", "stated", "said", "claims",
@@ -74,7 +74,7 @@ def is_valid_news(text):
     if not any(v in text for v in verbs):
         return False, "Missing action words usually present in news."
 
-    # 5️⃣ Must contain at least 2 words that look like real nouns/names
+    # 5. Must contain at least 2 words that look like real nouns/names
     if len([w for w in text.split() if len(w) > 3]) < 3:
         return False, "Not enough meaningful words."
 
